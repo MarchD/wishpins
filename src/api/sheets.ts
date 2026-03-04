@@ -1,8 +1,6 @@
 import type { UpdateWishPayload, WishItem, WishStatus } from '../types';
 
 const baseUrl = import.meta.env.VITE_SHEETS_API_URL as string | undefined;
-const proxyBase = import.meta.env.VITE_PROXY_API_BASE as string | undefined;
-const isDev = import.meta.env.DEV;
 
 const toStatus = (value: unknown): WishStatus => {
   if (value === 'todo' || value === 'in_progress' || value === 'done') {
@@ -35,24 +33,13 @@ const normalizeItem = (value: unknown): WishItem => {
 };
 
 const ensureConfigured = () => {
-  if (!isDev && !proxyBase && !baseUrl) {
-    throw new Error(
-      'Missing API config. Set VITE_PROXY_API_BASE (recommended) or VITE_SHEETS_API_URL in .env.'
-    );
+  if (!baseUrl) {
+    throw new Error('Missing API config. Set VITE_SHEETS_API_URL in .env.');
   }
 };
 
 const endpoint = (action: 'items' | 'update') => {
   ensureConfigured();
-  if (isDev) {
-    return `/api?action=${action}`;
-  }
-
-  if (proxyBase) {
-    const root = proxyBase.replace(/\/+$/, '');
-    return `${root}?action=${action}`;
-  }
-
   const root = baseUrl!.replace(/\/+$/, '');
   return `${root}?action=${action}`;
 };
