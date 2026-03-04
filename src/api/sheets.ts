@@ -96,6 +96,11 @@ const parseJsonResponse = async (response: Response): Promise<unknown> => {
   return parseJsonPayload(raw);
 };
 
+const withAction = (url: string, action: 'items' | 'update'): string => {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}action=${encodeURIComponent(action)}`;
+};
+
 const ensureConfigured = () => {
   if (!isDev && !proxyBase && !baseUrl) {
     throw new Error(
@@ -111,16 +116,16 @@ const ensureConfigured = () => {
 const endpoint = (action: 'items' | 'update') => {
   ensureConfigured();
   if (isDev) {
-    return `/api?action=${action}`;
+    return withAction('/api', action);
   }
 
   if (proxyBase) {
     const root = proxyBase.replace(/\/+$/, '');
-    return `${root}?action=${action}`;
+    return withAction(root, action);
   }
 
   const root = baseUrl!.replace(/\/+$/, '');
-  return `${root}?action=${action}`;
+  return withAction(root, action);
 };
 
 export const fetchItems = async (): Promise<WishItem[]> => {

@@ -34,6 +34,11 @@ const tryParseObjectLiteral = (text) => {
   return tryParse(normalizedQuotes);
 };
 
+const withAction = (url, action) => {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}action=${encodeURIComponent(action)}`;
+};
+
 const parseJsonPayload = (raw, finalUrl) => {
   const trimmed = String(raw || '').trim();
 
@@ -101,7 +106,7 @@ exports.handler = async (event) => {
     return asJson(400, { ok: false, error: 'Invalid action. Use items or update.' });
   }
 
-  const target = `${sheetsUrl.replace(/\/+$/, '')}?action=${action}`;
+  const target = withAction(sheetsUrl.replace(/\/+$/, ''), action);
 
   try {
     const response = await fetch(target, {
