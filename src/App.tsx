@@ -1,34 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  Snackbar,
-  Stack,
-  Typography
-} from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Snackbar, Stack, Typography } from '@mui/material';
 import { fetchItems, updateItem } from './api/sheets';
-import { Board } from './components/Board';
-import { ConfirmDoneModal } from './components/ConfirmDoneModal';
+import { Board, IN_PROGRESS_DONE_ZONE_ID, TODO_ZONE_ID } from './components/Board';
 import { STICKY_HEIGHT, STICKY_WIDTH } from './components/StickyCard';
 import type { WishItem, WishStatus } from './types';
-
-interface PendingDoneMove {
-  itemId: string;
-  previousStatus: WishStatus;
-  x: number;
-  y: number;
-}
 
 const App = () => {
   const [items, setItems] = useState<WishItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pendingDoneMove, setPendingDoneMove] = useState<PendingDoneMove | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
@@ -121,19 +102,14 @@ const App = () => {
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const destination = event.over?.id;
-    if (!destination) {
-      return;
-    }
-
-    const nextStatus = String(destination) as WishStatus;
-    if (nextStatus !== 'todo' && nextStatus !== 'in_progress' && nextStatus !== 'done') {
+    const destination = String(event.over?.id ?? '');
+    if (destination !== TODO_ZONE_ID && destination !== IN_PROGRESS_DONE_ZONE_ID) {
       return;
     }
 
     const id = String(event.active.id);
     const item = itemById.get(id);
-    if (!item || isSubmitting || savingIds.has(id)) {
+    if (!item || savingIds.has(id)) {
       return;
     }
 
@@ -141,6 +117,9 @@ const App = () => {
     if (!canvas) {
       return;
     }
+
+    const nextStatus: WishStatus =
+      destination === TODO_ZONE_ID ? 'todo' : item.status === 'done' ? 'done' : 'in_progress';
 
     const canvasRect = canvas.getBoundingClientRect();
     const itemRect = event.active.rect.current.initial ?? event.active.rect.current.translated;
@@ -154,11 +133,6 @@ const App = () => {
     const clampedX = Math.max(8, Math.min(rawLeft, canvasRect.width - STICKY_WIDTH - 8));
     const clampedY = Math.max(8, Math.min(rawTop, canvasRect.height - STICKY_HEIGHT - 8));
 
-    if (nextStatus === 'done') {
-      setPendingDoneMove({ itemId: id, previousStatus: item.status, x: clampedX, y: clampedY });
-      return;
-    }
-
     void persistItemPlacement({
       itemId: id,
       nextStatus,
@@ -170,74 +144,46 @@ const App = () => {
     });
   };
 
-  const handleCancelDone = () => {
-    if (isSubmitting) {
-      return;
-    }
-    setPendingDoneMove(null);
-  };
-
-  const handleConfirmDone = async () => {
-    if (!pendingDoneMove || isSubmitting || savingIds.has(pendingDoneMove.itemId)) {
-      return;
-    }
-
-    const item = itemById.get(pendingDoneMove.itemId);
-    if (!item) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    await persistItemPlacement({
-      itemId: pendingDoneMove.itemId,
-      nextStatus: 'done',
-      previousStatus: pendingDoneMove.previousStatus,
-      x: pendingDoneMove.x,
-      y: pendingDoneMove.y,
-      previousX: item.x,
-      previousY: item.y
-    });
-    setPendingDoneMove(null);
-    setIsSubmitting(false);
-  };
-
   return (
-    <Box sx={{ minHeight: '100vh', py: 4, bgcolor: '#f6f4ef' }}>
-      <Container maxWidth="lg">
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
-          <Typography variant="h4" fontWeight={800}>
-            WishPins
-          </Typography>
-          <Button variant="contained" onClick={() => void loadItems()} disabled={loading || isSubmitting}>
-            Refresh
+    <Box sx={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          zIndex: 30,
+          top: 16,
+          left: 16,
+          right: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 2
+        }}
+      >
+        <Typography variant="h5" fontWeight={900} color="rgba(39, 24, 12, 0.9)">
+          WishPins
+        </Typography>
+        <Button variant="contained" onClick={() => void loadItems()} disabled={loading}>
+          Refresh
+        </Button>
+      </Box>
+
+      {loading ? (
+        <Stack alignItems="center" justifyContent="center" sx={{ width: '100vw', height: '100vh', bgcolor: '#f6f4ef' }} spacing={1}>
+          <CircularProgress />
+          <Typography color="text.secondary">Loading board...</Typography>
+        </Stack>
+      ) : error ? (
+        <Stack spacing={2} alignItems="flex-start" sx={{ p: 3 }}>
+          <Alert severity="error">{error}</Alert>
+          <Button variant="outlined" onClick={() => void loadItems()}>
+            Retry
           </Button>
         </Stack>
-
-        {loading ? (
-          <Stack alignItems="center" justifyContent="center" minHeight={320} spacing={1}>
-            <CircularProgress />
-            <Typography color="text.secondary">Loading board...</Typography>
-          </Stack>
-        ) : error ? (
-          <Stack spacing={2} alignItems="flex-start">
-            <Alert severity="error">{error}</Alert>
-            <Button variant="outlined" onClick={() => void loadItems()}>
-              Retry
-            </Button>
-          </Stack>
-        ) : (
-          <DndContext onDragEnd={handleDragEnd}>
-            <Board items={items} />
-          </DndContext>
-        )}
-      </Container>
-
-      <ConfirmDoneModal
-        open={Boolean(pendingDoneMove)}
-        isSubmitting={isSubmitting}
-        onCancel={handleCancelDone}
-        onConfirm={() => void handleConfirmDone()}
-      />
+      ) : (
+        <DndContext onDragEnd={handleDragEnd}>
+          <Board items={items} />
+        </DndContext>
+      )}
 
       <Snackbar
         open={Boolean(toast)}
