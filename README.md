@@ -57,7 +57,7 @@ hoodie-1 | Oversize Hoodie |  |  | done |  |  | 2026-01-01T12:00:00.000Z
 https://script.google.com/macros/s/AKfycb.../exec
 ```
 
-The frontend calls:
+The frontend will call:
 - `GET {URL}?action=items`
 - `POST {URL}?action=update`
 
@@ -75,6 +75,11 @@ cp .env.example .env
 VITE_SHEETS_API_URL=https://script.google.com/macros/s/AKfycb.../exec
 ```
 
+Optional (recommended for production proxy):
+
+```env
+VITE_PROXY_API_BASE=/api
+```
 
 ## 4) Run locally
 
@@ -85,8 +90,9 @@ npm run dev
 
 Open the local URL from Vite (usually `http://localhost:5173`).
 
-Local dev calls your `VITE_SHEETS_API_URL` directly.
-If your Apps Script deployment is not accessible from the browser due to CORS policy, use a server-side proxy of your choice.
+Local dev uses a Vite proxy to avoid browser CORS errors:
+- Browser calls `/api?action=items` and `/api?action=update`
+- Vite forwards those requests to `VITE_SHEETS_API_URL`
 
 If you change `.env`, restart `npm run dev`.
 
@@ -104,11 +110,17 @@ You can deploy `dist/` to:
 - Cloudflare Pages
 - GitHub Pages
 
-### Deployment note
+### Netlify production setup (CORS-safe)
 
-The app now uses `VITE_SHEETS_API_URL` directly in both development and production.
+This repo includes a Netlify Function proxy:
+- [`netlify/functions/sheets.js`](netlify/functions/sheets.js)
+- [`netlify.toml`](netlify.toml) redirect from `/api` to the function
 
-If your host/browser blocks cross-origin requests to Apps Script, add a server-side proxy in your platform and point `VITE_SHEETS_API_URL` to that proxy URL.
+Set these Netlify environment variables:
+- `SHEETS_API_URL=https://script.google.com/macros/s/AKfycb.../exec`
+- `VITE_PROXY_API_BASE=/api`
+
+Then redeploy. In production, browser calls your own domain `/api?...`, and Netlify server-side function calls Apps Script, avoiding browser CORS blocks.
 
 ## Done move confirmation text
 
