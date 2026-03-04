@@ -10,6 +10,22 @@ const asJson = (statusCode, body) => ({
 });
 
 
+const snippetOf = (value) => String(value || '').trim().slice(0, 180);
+
+const tryParse = (text) => {
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    return undefined;
+  }
+};
+
+const tryParseObjectLiteral = (text) => {
+  const normalizedKeys = text.replace(/([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g, '$1"$2"$3');
+  const normalizedQuotes = normalizedKeys.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"');
+  return tryParse(normalizedQuotes);
+};
+
 const parseJsonPayload = (raw) => {
   const trimmed = String(raw || '').trim();
 
@@ -17,23 +33,35 @@ const parseJsonPayload = (raw) => {
     throw new Error('Empty response from Google Apps Script.');
   }
 
-  try {
-    return JSON.parse(trimmed);
-  } catch (_error) {
-    const starts = [trimmed.indexOf('{'), trimmed.indexOf('[')].filter((idx) => idx >= 0);
-    if (starts.length === 0) {
-      throw new Error('Google Apps Script returned HTML instead of JSON. Check Web App access + URL.');
-    }
+  const direct = tryParse(trimmed);
+  if (direct !== undefined) {
+    return direct;
+  }
 
+  const starts = [trimmed.indexOf('{'), trimmed.indexOf('[')].filter((idx) => idx >= 0);
+  if (starts.length > 0) {
     const start = Math.min(...starts);
     const end = Math.max(trimmed.lastIndexOf('}'), trimmed.lastIndexOf(']'));
 
-    if (end <= start) {
-      throw new Error('Google Apps Script response contains malformed JSON.');
-    }
+    if (end > start) {
+      const candidate = trimmed.slice(start, end + 1);
+      const parsedCandidate = tryParse(candidate);
+      if (parsedCandidate !== undefined) {
+        return parsedCandidate;
+      }
 
-    return JSON.parse(trimmed.slice(start, end + 1));
+      if (candidate.startsWith('{')) {
+        const parsedLiteral = tryParseObjectLiteral(candidate);
+        if (parsedLiteral !== undefined) {
+          return parsedLiteral;
+        }
+      }
+    }
   }
+
+  throw new Error(
+    `Google Apps Script returned non-JSON content. Snippet: ${snippetOf(trimmed)}`
+  );
 };
 
 exports.handler = async (event) => {

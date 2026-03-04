@@ -35,6 +35,16 @@ const normalizeItem = (value: unknown): WishItem => {
 };
 
 
+const snippetOf = (value: string): string => value.trim().slice(0, 180);
+
+const tryParse = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    return undefined;
+  }
+};
+
 const parseJsonPayload = (raw: string): unknown => {
   const trimmed = raw.trim();
 
@@ -42,27 +52,32 @@ const parseJsonPayload = (raw: string): unknown => {
     throw new Error('Empty API response.');
   }
 
-  try {
-    return JSON.parse(trimmed);
-  } catch (_error) {
-    const start = Math.min(
-      ...[trimmed.indexOf('{'), trimmed.indexOf('[')].filter((idx) => idx >= 0)
-    );
-
-    if (!Number.isFinite(start)) {
-      throw new Error('API returned non-JSON content (likely Google HTML/CORS interstitial).');
-    }
-
-    const endObject = trimmed.lastIndexOf('}');
-    const endArray = trimmed.lastIndexOf(']');
-    const end = Math.max(endObject, endArray);
-
-    if (end <= start) {
-      throw new Error('API returned malformed JSON payload.');
-    }
-
-    return JSON.parse(trimmed.slice(start, end + 1));
+  const direct = tryParse(trimmed);
+  if (direct !== undefined) {
+    return direct;
   }
+
+  const starts = [trimmed.indexOf('{'), trimmed.indexOf('[')].filter((idx) => idx >= 0);
+  if (starts.length === 0) {
+    throw new Error(
+      `API returned non-JSON content (likely Google HTML/CORS interstitial). Snippet: ${snippetOf(trimmed)}`
+    );
+  }
+
+  const start = Math.min(...starts);
+  const end = Math.max(trimmed.lastIndexOf('}'), trimmed.lastIndexOf(']'));
+
+  if (end <= start) {
+    throw new Error('API returned malformed JSON payload.');
+  }
+
+  const candidate = trimmed.slice(start, end + 1);
+  const parsedCandidate = tryParse(candidate);
+  if (parsedCandidate !== undefined) {
+    return parsedCandidate;
+  }
+
+  throw new Error(`API returned malformed JSON payload. Snippet: ${snippetOf(candidate)}`);
 };
 
 const parseJsonResponse = async (response: Response): Promise<unknown> => {
