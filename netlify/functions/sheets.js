@@ -9,6 +9,33 @@ const asJson = (statusCode, body) => ({
   body: JSON.stringify(body)
 });
 
+
+const parseJsonPayload = (raw) => {
+  const trimmed = String(raw || '').trim();
+
+  if (!trimmed) {
+    throw new Error('Empty response from Google Apps Script.');
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (_error) {
+    const starts = [trimmed.indexOf('{'), trimmed.indexOf('[')].filter((idx) => idx >= 0);
+    if (starts.length === 0) {
+      throw new Error('Google Apps Script returned HTML instead of JSON. Check Web App access + URL.');
+    }
+
+    const start = Math.min(...starts);
+    const end = Math.max(trimmed.lastIndexOf('}'), trimmed.lastIndexOf(']'));
+
+    if (end <= start) {
+      throw new Error('Google Apps Script response contains malformed JSON.');
+    }
+
+    return JSON.parse(trimmed.slice(start, end + 1));
+  }
+};
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -42,15 +69,9 @@ exports.handler = async (event) => {
     });
 
     const raw = await response.text();
+    const data = parseJsonPayload(raw);
 
-    return {
-      statusCode: response.status,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: raw
-    };
+    return asJson(response.status, data);
   } catch (error) {
     return asJson(502, {
       ok: false,

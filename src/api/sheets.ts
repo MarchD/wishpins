@@ -34,6 +34,42 @@ const normalizeItem = (value: unknown): WishItem => {
   };
 };
 
+
+const parseJsonPayload = (raw: string): unknown => {
+  const trimmed = raw.trim();
+
+  if (!trimmed) {
+    throw new Error('Empty API response.');
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (_error) {
+    const start = Math.min(
+      ...[trimmed.indexOf('{'), trimmed.indexOf('[')].filter((idx) => idx >= 0)
+    );
+
+    if (!Number.isFinite(start)) {
+      throw new Error('API returned non-JSON content (likely Google HTML/CORS interstitial).');
+    }
+
+    const endObject = trimmed.lastIndexOf('}');
+    const endArray = trimmed.lastIndexOf(']');
+    const end = Math.max(endObject, endArray);
+
+    if (end <= start) {
+      throw new Error('API returned malformed JSON payload.');
+    }
+
+    return JSON.parse(trimmed.slice(start, end + 1));
+  }
+};
+
+const parseJsonResponse = async (response: Response): Promise<unknown> => {
+  const raw = await response.text();
+  return parseJsonPayload(raw);
+};
+
 const ensureConfigured = () => {
   if (!isDev && !proxyBase && !baseUrl) {
     throw new Error(
@@ -70,7 +106,7 @@ export const fetchItems = async (): Promise<WishItem[]> => {
     throw new Error(`Failed to load items (${response.status})`);
   }
 
-  const data = (await response.json()) as unknown;
+  const data = await parseJsonResponse(response);
   if (!Array.isArray(data)) {
     throw new Error('Invalid API response: expected array of items.');
   }
@@ -93,7 +129,7 @@ export const updateItem = async (payload: UpdateWishPayload): Promise<void> => {
     throw new Error(`Failed to update item (${response.status})`);
   }
 
-  const result = (await response.json()) as Record<string, unknown>;
+  const result = (await parseJsonResponse(response)) as Record<string, unknown>;
   if (result.ok !== true) {
     throw new Error(String(result.error ?? 'Unknown update error'));
   }
