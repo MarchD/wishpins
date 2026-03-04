@@ -7,6 +7,9 @@ interface StickyCardProps {
   item: WishItem;
 }
 
+export const STICKY_WIDTH = 190;
+export const STICKY_HEIGHT = 190;
+
 export const StickyCard = ({ item }: StickyCardProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: item.id,
@@ -15,7 +18,7 @@ export const StickyCard = ({ item }: StickyCardProps) => {
 
   const style: CSSProperties = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    zIndex: isDragging ? 10 : 1,
+    zIndex: isDragging ? 20 : 2,
     opacity: isDragging ? 0.85 : 1,
     touchAction: 'none'
   };
@@ -37,6 +40,12 @@ export const StickyCard = ({ item }: StickyCardProps) => {
       {...attributes}
       onClick={onCardClick}
       sx={{
+        pointerEvents: 'auto',
+        position: 'absolute',
+        left: item.x ?? 28,
+        top: item.y ?? 28,
+        width: STICKY_WIDTH,
+        minHeight: STICKY_HEIGHT,
         cursor: 'grab',
         userSelect: 'none',
         background: 'linear-gradient(160deg, #fff8b0 0%, #f7ef90 100%)',
@@ -44,7 +53,6 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         p: 1.5,
         boxShadow: '0 8px 18px rgba(0, 0, 0, 0.18)',
         border: '1px solid rgba(0, 0, 0, 0.08)',
-        minHeight: 88,
         display: 'flex',
         flexDirection: 'column',
         gap: 1,
@@ -63,7 +71,7 @@ export const StickyCard = ({ item }: StickyCardProps) => {
           alt={item.title}
           sx={{
             width: '100%',
-            maxHeight: 96,
+            maxHeight: 82,
             objectFit: 'cover',
             borderRadius: 1,
             border: '1px solid rgba(0, 0, 0, 0.1)'

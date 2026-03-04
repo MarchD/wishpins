@@ -1,98 +1,104 @@
 import { useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Box, Typography } from '@mui/material';
-import type { WishItem, WishStatus } from '../types';
+import type { WishItem } from '../types';
 import { StickyCard } from './StickyCard';
 
 interface BoardProps {
   items: WishItem[];
 }
 
-const DroppableColumn = ({
+const TODO_ZONE_ID = 'todo';
+const IN_PROGRESS_ZONE_ID = 'in_progress';
+const DONE_ZONE_ID = 'done';
+
+const CanvasZone = ({
   id,
   title,
-  accent,
-  items
+  subtitle,
+  sx
 }: {
-  id: WishStatus;
+  id: string;
   title: string;
-  accent: string;
-  items: WishItem[];
+  subtitle?: string;
+  sx: Record<string, unknown>;
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <Box
       ref={setNodeRef}
+      data-zone-id={id}
       sx={{
-        flex: 1,
-        minWidth: 240,
-        borderRadius: 2,
-        p: 2,
-        border: `2px solid ${accent}`,
-        bgcolor: isOver ? 'rgba(255, 255, 255, 0.96)' : 'rgba(255, 255, 255, 0.86)',
-        transition: 'background-color 150ms ease',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1.2
+        position: 'absolute',
+        borderRadius: 3,
+        border: isOver ? '2px solid rgba(33, 150, 243, 0.75)' : '2px dashed rgba(0, 0, 0, 0.2)',
+        bgcolor: isOver ? 'rgba(255, 255, 255, 0.44)' : 'rgba(255, 255, 255, 0.2)',
+        backdropFilter: 'blur(1px)',
+        transition: 'all 120ms ease',
+        p: 1.5,
+        ...sx
       }}
     >
-      <Typography fontWeight={800} letterSpacing={0.5} color={accent}>
+      <Typography fontWeight={900} fontSize={14} letterSpacing={0.6}>
         {title}
       </Typography>
-
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.2, minHeight: 180 }}>
-        {items.map((item) => (
-          <StickyCard key={item.id} item={item} />
-        ))}
-      </Box>
+      {subtitle ? (
+        <Typography color="text.secondary" fontSize={12}>
+          {subtitle}
+        </Typography>
+      ) : null}
     </Box>
   );
 };
 
 export const Board = ({ items }: BoardProps) => {
-  const grouped = useMemo(() => {
-    return {
-      todo: items.filter((item) => item.status === 'todo'),
-      in_progress: items.filter((item) => item.status === 'in_progress'),
-      done: items.filter((item) => item.status === 'done')
-    };
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const byStatus = a.status.localeCompare(b.status);
+      if (byStatus !== 0) {
+        return byStatus;
+      }
+      return a.id.localeCompare(b.id);
+    });
   }, [items]);
 
   return (
     <Box
+      id="wishpins-canvas"
       sx={{
-        borderRadius: 3,
-        p: { xs: 1.5, md: 2.5 },
+        position: 'relative',
+        height: { xs: 560, md: 640 },
+        borderRadius: 4,
+        overflow: 'hidden',
+        p: 2,
         backgroundImage:
-          'linear-gradient(rgba(255,255,255,0.24) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.24) 1px, transparent 1px), radial-gradient(circle at 15% 15%, #ffe6ad 0%, #ffd493 30%, #e4b87a 100%)',
-        backgroundSize: '24px 24px, 24px 24px, cover',
-        border: '1px solid rgba(0, 0, 0, 0.08)',
+          'linear-gradient(rgba(255,255,255,0.26) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.26) 1px, transparent 1px), radial-gradient(circle at 15% 15%, #ffe6ad 0%, #ffd493 35%, #e4b87a 100%)',
+        backgroundSize: '26px 26px, 26px 26px, cover',
+        border: '1px solid rgba(0, 0, 0, 0.1)',
         boxShadow: '0 14px 28px rgba(0, 0, 0, 0.18)'
       }}
     >
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <Box sx={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography variant="subtitle1" fontWeight={900}>
-            TO DO
-          </Typography>
-          <DroppableColumn id="todo" title="Items" accent="#fb8c00" items={grouped.todo} />
-        </Box>
+      <CanvasZone id={TODO_ZONE_ID} title="TO DO" subtitle="Start here" sx={{ top: 16, left: 16, bottom: 16, width: '34%' }} />
 
-        <Box sx={{ flex: 2, minWidth: 320, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography variant="subtitle1" fontWeight={900}>
-            IN PROGRESS / DONE
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <DroppableColumn
-              id="in_progress"
-              title="IN PROGRESS"
-              accent="#1e88e5"
-              items={grouped.in_progress}
-            />
-            <DroppableColumn id="done" title="DONE" accent="#43a047" items={grouped.done} />
-          </Box>
-        </Box>
+      <CanvasZone
+        id={IN_PROGRESS_ZONE_ID}
+        title="IN PROGRESS"
+        subtitle="Working on it"
+        sx={{ top: 16, left: '36%', height: '48%', right: 16 }}
+      />
+
+      <CanvasZone
+        id={DONE_ZONE_ID}
+        title="DONE"
+        subtitle="Pinned as complete"
+        sx={{ top: '52%', left: '36%', bottom: 16, right: 16 }}
+      />
+
+      <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        {sortedItems.map((item) => (
+          <StickyCard key={item.id} item={item} />
+        ))}
       </Box>
     </Box>
   );
