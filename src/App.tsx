@@ -143,7 +143,10 @@ const App = () => {
     }
 
     const canvasRect = canvas.getBoundingClientRect();
-    const itemRect = event.active.rect.current.initial;
+    const itemRect = event.active.rect.current.initial ?? event.active.rect.current.translated;
+    if (!itemRect) {
+      return;
+    }
 
     const rawLeft = itemRect.left + event.delta.x - canvasRect.left;
     const rawTop = itemRect.top + event.delta.y - canvasRect.top;
