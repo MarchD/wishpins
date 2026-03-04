@@ -12,6 +12,14 @@ const asJson = (statusCode, body) => ({
 
 const snippetOf = (value) => String(value || '').trim().slice(0, 180);
 
+const isGoogleSignInHtml = (value) => {
+  const text = String(value || '').toLowerCase();
+  return (
+    text.includes('<!doctype html') &&
+    (text.includes('accounts.google.com') || text.includes('/v3/signin/'))
+  );
+};
+
 const tryParse = (text) => {
   try {
     return JSON.parse(text);
@@ -26,11 +34,17 @@ const tryParseObjectLiteral = (text) => {
   return tryParse(normalizedQuotes);
 };
 
-const parseJsonPayload = (raw) => {
+const parseJsonPayload = (raw, finalUrl) => {
   const trimmed = String(raw || '').trim();
 
   if (!trimmed) {
     throw new Error('Empty response from Google Apps Script.');
+  }
+
+  if (isGoogleSignInHtml(trimmed)) {
+    throw new Error(
+      `Google returned a sign-in HTML page instead of JSON. Use a deployed Web App /exec URL with access set to "Anyone with the link". Upstream URL: ${finalUrl || 'unknown'}`
+    );
   }
 
   const direct = tryParse(trimmed);
@@ -97,7 +111,7 @@ exports.handler = async (event) => {
     });
 
     const raw = await response.text();
-    const data = parseJsonPayload(raw);
+    const data = parseJsonPayload(raw, response.url);
 
     return asJson(response.status, data);
   } catch (error) {

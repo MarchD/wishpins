@@ -37,6 +37,11 @@ const normalizeItem = (value: unknown): WishItem => {
 
 const snippetOf = (value: string): string => value.trim().slice(0, 180);
 
+const isGoogleSignInHtml = (value: string): boolean => {
+  const text = value.toLowerCase();
+  return text.includes('<!doctype html') && (text.includes('accounts.google.com') || text.includes('/v3/signin/'));
+};
+
 const tryParse = (text: string): unknown => {
   try {
     return JSON.parse(text);
@@ -50,6 +55,12 @@ const parseJsonPayload = (raw: string): unknown => {
 
   if (!trimmed) {
     throw new Error('Empty API response.');
+  }
+
+  if (isGoogleSignInHtml(trimmed)) {
+    throw new Error(
+      'Google returned a sign-in HTML page instead of JSON. Check that your Apps Script Web App URL ends with /exec and access is set to "Anyone with the link".'
+    );
   }
 
   const direct = tryParse(trimmed);
