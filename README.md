@@ -75,6 +75,12 @@ cp .env.example .env
 VITE_SHEETS_API_URL=https://script.google.com/macros/s/AKfycb.../exec
 ```
 
+Optional (recommended for production proxy):
+
+```env
+VITE_PROXY_API_BASE=/api
+```
+
 ## 4) Run locally
 
 ```bash
@@ -104,7 +110,17 @@ You can deploy `dist/` to:
 - Cloudflare Pages
 - GitHub Pages
 
-For production, frontend calls Apps Script URL directly from browser (`VITE_SHEETS_API_URL`), so Apps Script deployment settings must allow access (`Anyone with the link`).
+### Netlify production setup (CORS-safe)
+
+This repo includes a Netlify Function proxy:
+- [`netlify/functions/sheets.js`](netlify/functions/sheets.js)
+- [`netlify.toml`](netlify.toml) redirect from `/api` to the function
+
+Set these Netlify environment variables:
+- `SHEETS_API_URL=https://script.google.com/macros/s/AKfycb.../exec`
+- `VITE_PROXY_API_BASE=/api`
+
+Then redeploy. In production, browser calls your own domain `/api?...`, and Netlify server-side function calls Apps Script, avoiding browser CORS blocks.
 
 ## Done move confirmation text
 
