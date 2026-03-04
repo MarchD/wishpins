@@ -1,6 +1,10 @@
 import { CSSProperties, MouseEvent } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Box, Link as MuiLink, Typography } from '@mui/material';
+import stickerBolt from '../assets/stickers/sticker-bolt.svg';
+import stickerFlower from '../assets/stickers/sticker-flower.svg';
+import stickerHeart from '../assets/stickers/sticker-heart.svg';
+import stickerStar from '../assets/stickers/sticker-star.svg';
 import type { WishItem } from '../types';
 
 interface StickyCardProps {
@@ -9,6 +13,22 @@ interface StickyCardProps {
 
 export const STICKY_WIDTH = 190;
 export const STICKY_HEIGHT = 190;
+
+const stickerVariants = [stickerFlower, stickerStar, stickerHeart, stickerBolt];
+
+const hashString = (value: string): number => {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const stickerForItem = (itemId: string): string => {
+  const index = hashString(itemId) % stickerVariants.length;
+  return stickerVariants[index];
+};
 
 export const StickyCard = ({ item }: StickyCardProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -33,6 +53,8 @@ export const StickyCard = ({ item }: StickyCardProps) => {
     }
   };
 
+  const sticker = stickerForItem(item.id);
+
   return (
     <Box
       ref={setNodeRef}
@@ -48,7 +70,10 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         minHeight: STICKY_HEIGHT,
         cursor: 'grab',
         userSelect: 'none',
-        background: 'linear-gradient(160deg, #fff8b0 0%, #f7ef90 100%)',
+        backgroundImage: `linear-gradient(160deg, rgba(255,248,176,0.96) 0%, rgba(247,239,144,0.96) 100%), url(${sticker})`,
+        backgroundSize: 'cover, 120px',
+        backgroundPosition: 'center, right -8px bottom -8px',
+        backgroundRepeat: 'no-repeat, no-repeat',
         borderRadius: 2,
         p: 1.5,
         boxShadow: '0 8px 18px rgba(0, 0, 0, 0.18)',
