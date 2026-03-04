@@ -3,10 +3,6 @@ const HEADERS = ['id', 'title', 'link', 'image', 'status', 'x', 'y', 'updatedAt'
 
 function doGet(e) {
   try {
-    const action = getAction_(e);
-    if (action !== 'items') {
-      return json_({ ok: false, error: 'Not Found' });
-    }
 
     const sheet = getSheet_();
     const values = sheet.getDataRange().getValues();

@@ -34,27 +34,98 @@ const normalizeItem = (value: unknown): WishItem => {
   };
 };
 
+
+const snippetOf = (value: string): string => value.trim().slice(0, 180);
+
+const isGoogleSignInHtml = (value: string): boolean => {
+  const text = value.toLowerCase();
+  return text.includes('<!doctype html') && (text.includes('accounts.google.com') || text.includes('/v3/signin/'));
+};
+
+const tryParse = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch (_error) {
+    return undefined;
+  }
+};
+
+const parseJsonPayload = (raw: string): unknown => {
+  const trimmed = raw.trim();
+
+  if (!trimmed) {
+    throw new Error('Empty API response.');
+  }
+
+  if (isGoogleSignInHtml(trimmed)) {
+    throw new Error(
+      'Google returned a sign-in HTML page instead of JSON. Check that your Apps Script Web App URL ends with /exec and access is set to "Anyone with the link".'
+    );
+  }
+
+  const direct = tryParse(trimmed);
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const starts = [trimmed.indexOf('{'), trimmed.indexOf('[')].filter((idx) => idx >= 0);
+  if (starts.length === 0) {
+    throw new Error(
+      `API returned non-JSON content (likely Google HTML/CORS interstitial). Snippet: ${snippetOf(trimmed)}`
+    );
+  }
+
+  const start = Math.min(...starts);
+  const end = Math.max(trimmed.lastIndexOf('}'), trimmed.lastIndexOf(']'));
+
+  if (end <= start) {
+    throw new Error('API returned malformed JSON payload.');
+  }
+
+  const candidate = trimmed.slice(start, end + 1);
+  const parsedCandidate = tryParse(candidate);
+  if (parsedCandidate !== undefined) {
+    return parsedCandidate;
+  }
+
+  throw new Error(`API returned malformed JSON payload. Snippet: ${snippetOf(candidate)}`);
+};
+
+const parseJsonResponse = async (response: Response): Promise<unknown> => {
+  const raw = await response.text();
+  return parseJsonPayload(raw);
+};
+
+const withAction = (url: string, action: 'items' | 'update'): string => {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}action=${encodeURIComponent(action)}`;
+};
+
 const ensureConfigured = () => {
   if (!isDev && !proxyBase && !baseUrl) {
     throw new Error(
       'Missing API config. Set VITE_PROXY_API_BASE (recommended) or VITE_SHEETS_API_URL in .env.'
     );
   }
+
+  if (isDev && !baseUrl) {
+    throw new Error('Missing API config. Set VITE_SHEETS_API_URL in .env for local proxy target.');
+  }
 };
 
 const endpoint = (action: 'items' | 'update') => {
   ensureConfigured();
   if (isDev) {
-    return `/api?action=${action}`;
+    return withAction('/api', action);
   }
 
   if (proxyBase) {
     const root = proxyBase.replace(/\/+$/, '');
-    return `${root}?action=${action}`;
+    return withAction(root, action);
   }
 
   const root = baseUrl!.replace(/\/+$/, '');
-  return `${root}?action=${action}`;
+  return withAction(root, action);
 };
 
 export const fetchItems = async (): Promise<WishItem[]> => {
@@ -66,7 +137,7 @@ export const fetchItems = async (): Promise<WishItem[]> => {
     throw new Error(`Failed to load items (${response.status})`);
   }
 
-  const data = (await response.json()) as unknown;
+  const data = await parseJsonResponse(response);
   if (!Array.isArray(data)) {
     throw new Error('Invalid API response: expected array of items.');
   }
@@ -89,7 +160,7 @@ export const updateItem = async (payload: UpdateWishPayload): Promise<void> => {
     throw new Error(`Failed to update item (${response.status})`);
   }
 
-  const result = (await response.json()) as Record<string, unknown>;
+  const result = (await parseJsonResponse(response)) as Record<string, unknown>;
   if (result.ok !== true) {
     throw new Error(String(result.error ?? 'Unknown update error'));
   }
