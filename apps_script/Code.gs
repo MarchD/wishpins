@@ -1,5 +1,15 @@
 const SHEET_NAME = 'wishes';
-const HEADERS = ['id', 'title', 'link', 'image', 'status', 'x', 'y', 'updatedAt'];
+const HEADER_ALIASES = {
+  id: ['id'],
+  title: ['title'],
+  link: ['link'],
+  image: ['image'],
+  status: ['status'],
+  x: ['x'],
+  y: ['y'],
+  updatedAt: ['updated_at', 'updatedAt'],
+  sticker: ['sticker']
+};
 
 function doGet(e) {
   try {
@@ -17,6 +27,7 @@ function doGet(e) {
         title: asString_(row[index.title]),
         link: asString_(row[index.link]),
         image: asString_(row[index.image]),
+        sticker: asString_(row[index.sticker]),
         status: asString_(row[index.status]) || 'todo',
         x: row[index.x] === '' ? '' : row[index.x],
         y: row[index.y] === '' ? '' : row[index.y],
@@ -81,6 +92,10 @@ function doPost(e) {
 
     sheet.getRange(rowNumber, index.updatedAt + 1).setValue(new Date().toISOString());
 
+    if (Object.prototype.hasOwnProperty.call(body, 'sticker')) {
+      sheet.getRange(rowNumber, index.sticker + 1).setValue(asString_(body.sticker));
+    }
+
     return json_({ ok: true });
   } catch (error) {
     return json_({ ok: false, error: error.message || String(error) });
@@ -107,10 +122,19 @@ function getSheet_() {
 function headerIndex_(headerRow) {
   const map = {};
 
-  HEADERS.forEach(function (header) {
-    const idx = headerRow.indexOf(header);
+  Object.keys(HEADER_ALIASES).forEach(function (header) {
+    const aliases = HEADER_ALIASES[header];
+    let idx = -1;
+
+    for (let i = 0; i < aliases.length; i += 1) {
+      idx = headerRow.indexOf(aliases[i]);
+      if (idx !== -1) {
+        break;
+      }
+    }
+
     if (idx === -1) {
-      throw new Error('Missing required header: ' + header);
+      throw new Error('Missing required header: ' + aliases[0]);
     }
     map[header] = idx;
   });

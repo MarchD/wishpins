@@ -30,15 +30,15 @@ WishPins is a small drag-and-drop pin board powered by **React + Vite + TypeScri
 3. Put these exact headers in row 1:
 
 ```text
-id | title | link | image | status | x | y | updatedAt
+id | title | link | image | status | x | y | updated_at | sticker
 ```
 
 4. Add sample rows (starting row 2), for example:
 
 ```text
-book-1 | Atomic Habits | https://example.com/book |  | todo |  |  | 
-lego-1 | Lego Set | https://example.com/lego | https://picsum.photos/200 | in_progress |  |  | 
-hoodie-1 | Oversize Hoodie |  |  | done |  |  | 2026-01-01T12:00:00.000Z
+book-1 | Atomic Habits | https://example.com/book |  | todo |  |  |  | group-2
+lego-1 | Lego Set | https://example.com/lego | https://picsum.photos/200 | in_progress |  |  |  | group-4
+hoodie-1 | Oversize Hoodie |  |  | done |  |  | 2026-01-01T12:00:00.000Z | group-1
 ```
 
 ## 2) Add Apps Script API (Option A, writable)

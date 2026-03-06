@@ -5,29 +5,35 @@ interface ConfirmDoneModalProps {
   isSubmitting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  title?: string;
+  description?: string;
+  cancelLabel?: string;
+  confirmLabel?: string;
 }
 
 export const ConfirmDoneModal = ({
   open,
   isSubmitting,
   onCancel,
-  onConfirm
+  onConfirm,
+  title = 'Ти прям точно впевнений? 👀',
+  description =
+    'Бо тіко закриєш цю сторінку — інші не зможуть це подарувать, а ти не зможеш передумать. А мені було лінь тут щось придумувать ВАХХААХ.',
+  cancelLabel = 'Нє, передумав(ла)',
+  confirmLabel = 'Так, забираю'
 }: ConfirmDoneModalProps) => {
   return (
     <Dialog open={open} onClose={isSubmitting ? undefined : onCancel} fullWidth maxWidth="sm">
-      <DialogTitle>Ти прям точно впевнений? 👀</DialogTitle>
+      <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <Typography>
-          Бо тіко закриєш цю сторінку — інші не зможуть це подарувать, а ти не зможеш передумать.
-          А мені було лінь тут щось придумувать ВАХХААХ.
-        </Typography>
+        <Typography>{description}</Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onCancel} disabled={isSubmitting} variant="outlined" color="inherit">
-          Нє, передумав(ла)
+          {cancelLabel}
         </Button>
         <Button onClick={onConfirm} disabled={isSubmitting} variant="contained" color="success">
-          Так, забираю
+          {confirmLabel}
         </Button>
       </DialogActions>
     </Dialog>
