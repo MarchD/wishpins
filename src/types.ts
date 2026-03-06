@@ -5,6 +5,7 @@ export interface WishItem {
   title: string;
   link?: string;
   image?: string;
+  sticker?: string;
   status: WishStatus;
   x?: number;
   y?: number;
@@ -16,4 +17,5 @@ export interface UpdateWishPayload {
   status: WishStatus;
   x?: number;
   y?: number;
+  sticker?: string;
 }

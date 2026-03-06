@@ -4,6 +4,7 @@ import { Alert, Box, Button, CircularProgress, Snackbar, Stack, Typography } fro
 import { fetchItems, updateItem } from './api/sheets';
 import { Board, IN_PROGRESS_DONE_ZONE_ID, TODO_ZONE_ID } from './components/Board';
 import { STICKY_HEIGHT, STICKY_WIDTH } from './components/StickyCard';
+import { resolveStickerKey } from './stickers';
 import type { WishItem, WishStatus } from './types';
 
 const App = () => {
@@ -75,7 +76,14 @@ const App = () => {
       );
 
       try {
-        await updateItem({ id: itemId, status: nextStatus, x, y });
+        const item = itemById.get(itemId);
+        await updateItem({
+          id: itemId,
+          status: nextStatus,
+          x,
+          y,
+          sticker: item ? resolveStickerKey(item.sticker, item.id) : undefined
+        });
       } catch (err) {
         setItems((current) =>
           current.map((item) =>
@@ -98,7 +106,7 @@ const App = () => {
         });
       }
     },
-    []
+    [itemById]
   );
 
   const handleDragEnd = (event: DragEndEvent) => {

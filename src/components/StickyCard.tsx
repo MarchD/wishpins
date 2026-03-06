@@ -8,6 +8,7 @@ import stickerGroup3 from '../assets/stickers/sticker-group-3.svg';
 import stickerGroup4 from '../assets/stickers/sticker-group-4.svg';
 import stickerGroup5 from '../assets/stickers/sticker-group-5.svg';
 import stickerGroup6 from '../assets/stickers/sticker-group-6.svg';
+import { resolveStickerKey, type StickerKey } from '../stickers';
 import type { WishItem } from '../types';
 
 interface StickyCardProps {
@@ -17,28 +18,20 @@ interface StickyCardProps {
 export const STICKY_WIDTH = 190;
 export const STICKY_HEIGHT = 190;
 
-const stickerVariants = [
-  stickerGroup0,
-  stickerGroup1,
-  stickerGroup2,
-  stickerGroup3,
-  stickerGroup4,
-  stickerGroup5,
-  stickerGroup6
-];
-
-const hashString = (value: string): number => {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(index);
-    hash |= 0;
-  }
-  return Math.abs(hash);
+type StickerStyle = {
+  src: string;
+  size: string;
+  position: string;
 };
 
-const stickerForItem = (itemId: string): string => {
-  const index = hashString(itemId) % stickerVariants.length;
-  return stickerVariants[index];
+const stickerStyles: Record<StickerKey, StickerStyle> = {
+  'group-0': { src: stickerGroup0, size: '124% auto', position: 'center 42%' },
+  'group-1': { src: stickerGroup1, size: '108% auto', position: 'center 50%' },
+  'group-2': { src: stickerGroup2, size: '116% auto', position: 'center 46%' },
+  'group-3': { src: stickerGroup3, size: '112% auto', position: 'center 48%' },
+  'group-4': { src: stickerGroup4, size: '122% auto', position: 'center 54%' },
+  'group-5': { src: stickerGroup5, size: '108% auto', position: 'center 50%' },
+  'group-6': { src: stickerGroup6, size: '118% auto', position: 'center 52%' }
 };
 
 export const StickyCard = ({ item }: StickyCardProps) => {
@@ -64,7 +57,8 @@ export const StickyCard = ({ item }: StickyCardProps) => {
     }
   };
 
-  const sticker = stickerForItem(item.id);
+  const stickerKey = resolveStickerKey(item.sticker, item.id);
+  const sticker = stickerStyles[stickerKey];
 
   return (
     <Box
@@ -82,9 +76,9 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         cursor: 'grab',
         userSelect: 'none',
         // Keep text readable while using the sticker art as the full card background.
-        backgroundImage: `linear-gradient(0deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.38)), url(${sticker})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundImage: `linear-gradient(0deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.38)), url(${sticker.src})`,
+        backgroundSize: `cover, ${sticker.size}`,
+        backgroundPosition: `center, ${sticker.position}`,
         backgroundRepeat: 'no-repeat',
         borderRadius: 2,
         overflow: 'hidden',

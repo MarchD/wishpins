@@ -1,4 +1,5 @@
 import type { UpdateWishPayload, WishItem, WishStatus } from '../types';
+import { normalizeStickerKey } from '../stickers';
 
 const baseUrl = import.meta.env.VITE_SHEETS_API_URL as string | undefined;
 const proxyBase = import.meta.env.VITE_PROXY_API_BASE as string | undefined;
@@ -27,10 +28,15 @@ const normalizeItem = (value: unknown): WishItem => {
     title: String(record.title ?? ''),
     link: record.link ? String(record.link) : undefined,
     image: record.image ? String(record.image) : undefined,
+    sticker: normalizeStickerKey(record.sticker),
     status: toStatus(record.status),
     x: toOptionalNumber(record.x),
     y: toOptionalNumber(record.y),
-    updatedAt: record.updatedAt ? String(record.updatedAt) : undefined
+    updatedAt: record.updatedAt
+      ? String(record.updatedAt)
+      : record.updated_at
+        ? String(record.updated_at)
+        : undefined
   };
 };
 
