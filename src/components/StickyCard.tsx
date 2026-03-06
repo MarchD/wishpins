@@ -66,6 +66,7 @@ export const StickyCard = ({ item }: StickyCardProps) => {
       onClick={onCardClick}
       sx={{
         pointerEvents: 'auto',
+        isolation: 'isolate',
         position: 'absolute',
         left: item.x ?? 28,
         top: item.y ?? 28,
@@ -73,61 +74,94 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         minHeight: STICKY_HEIGHT,
         cursor: 'grab',
         userSelect: 'none',
-        // Keep text readable while using the sticker art as the full card background.
+        // Keep sticky note base color and place SVG as a real image layer.
         backgroundColor: 'rgba(255, 248, 176, 0.96)',
-        backgroundImage: `linear-gradient(0deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.34)), url(${sticker.src})`,
-        backgroundSize: 'cover, contain',
-        backgroundPosition: 'center, center',
-        backgroundRepeat: 'no-repeat',
         borderRadius: 2,
         overflow: 'hidden',
-        p: 1.5,
         boxShadow: '0 8px 18px rgba(0, 0, 0, 0.18)',
         border: '1px solid rgba(0, 0, 0, 0.08)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
         '&:active': { cursor: 'grabbing' }
       }}
       style={style}
     >
-      <Typography fontWeight={700} lineHeight={1.2} color="rgba(24, 24, 24, 0.95)">
-        {item.title}
-      </Typography>
+      <Box
+        component="img"
+        src={sticker.src}
+        alt=""
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'auto',
+          height: 'auto',
+          maxWidth: '100%',
+          maxHeight: '100%',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          zIndex: 0
+        }}
+      />
 
-      {item.image ? (
-        <Box
-          component="img"
-          src={item.image}
-          alt={item.title}
-          sx={{
-            width: '100%',
-            maxHeight: 82,
-            objectFit: 'cover',
-            borderRadius: 1,
-            border: '1px solid rgba(0, 0, 0, 0.1)'
-          }}
-        />
-      ) : null}
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.28)',
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      />
 
-      {item.link ? (
-        <MuiLink
-          href={item.link}
-          target="_blank"
-          rel="noreferrer"
-          underline="hover"
-          fontSize={13}
-          onClick={onLinkClick}
-          sx={{
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            color: 'rgba(17, 24, 39, 0.9)'
-          }}
-        >
-          Open link
-        </MuiLink>
-      ) : null}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          p: 1.5,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1
+        }}
+      >
+        <Typography fontWeight={700} lineHeight={1.2} color="rgba(24, 24, 24, 0.95)">
+          {item.title}
+        </Typography>
+
+        {item.image ? (
+          <Box
+            component="img"
+            src={item.image}
+            alt={item.title}
+            sx={{
+              width: '100%',
+              maxHeight: 82,
+              objectFit: 'cover',
+              borderRadius: 1,
+              border: '1px solid rgba(0, 0, 0, 0.1)'
+            }}
+          />
+        ) : null}
+
+        {item.link ? (
+          <MuiLink
+            href={item.link}
+            target="_blank"
+            rel="noreferrer"
+            underline="hover"
+            fontSize={13}
+            onClick={onLinkClick}
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              color: 'rgba(17, 24, 39, 0.9)'
+            }}
+          >
+            Open link
+          </MuiLink>
+        ) : null}
+      </Box>
     </Box>
   );
 };
