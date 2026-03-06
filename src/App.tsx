@@ -1,18 +1,31 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { Alert, Box, Button, CircularProgress, Snackbar, Stack, Typography } from '@mui/material';
 import { fetchItems, updateItem } from './api/sheets';
 import { Board } from './components/Board';
 import { STICKY_HEIGHT, STICKY_WIDTH } from './components/StickyCard';
 import { resolveStickerKey } from './stickers';
-import type { WishItem, WishStatus } from './types';
+import type { UpdateWishPayload, WishItem, WishStatus } from './types';
+
+type PendingSave = {
+  payload: UpdateWishPayload;
+  rollback: {
+    status: WishStatus;
+    x?: number;
+    y?: number;
+  };
+};
+
+const SAVE_DEBOUNCE_MS = 350;
 
 const App = () => {
   const [items, setItems] = useState<WishItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const pendingSavesRef = useRef<Map<string, PendingSave>>(new Map());
+  const saveTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const inFlightSaveIdsRef = useRef<Set<string>>(new Set());
 
   const loadItems = useCallback(async () => {
     try {
@@ -31,9 +44,77 @@ const App = () => {
     void loadItems();
   }, [loadItems]);
 
+  useEffect(() => {
+    return () => {
+      saveTimersRef.current.forEach((timer) => clearTimeout(timer));
+      saveTimersRef.current.clear();
+    };
+  }, []);
+
   const itemById = useMemo(() => {
     return new Map(items.map((item) => [item.id, item]));
   }, [items]);
+
+  const flushSave = useCallback(
+    async (itemId: string) => {
+      if (inFlightSaveIdsRef.current.has(itemId)) {
+        return;
+      }
+
+      const pending = pendingSavesRef.current.get(itemId);
+      if (!pending) {
+        return;
+      }
+
+      pendingSavesRef.current.delete(itemId);
+      inFlightSaveIdsRef.current.add(itemId);
+
+      try {
+        await updateItem(pending.payload);
+      } catch (err) {
+        setItems((current) =>
+          current.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  status: pending.rollback.status,
+                  x: pending.rollback.x,
+                  y: pending.rollback.y
+                }
+              : item
+          )
+        );
+        setToast(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed');
+      } finally {
+        inFlightSaveIdsRef.current.delete(itemId);
+
+        // If user moved the same sticker again during request, flush the latest queued state.
+        if (pendingSavesRef.current.has(itemId)) {
+          void flushSave(itemId);
+        }
+      }
+    },
+    []
+  );
+
+  const queueDebouncedSave = useCallback(
+    (itemId: string, pending: PendingSave) => {
+      pendingSavesRef.current.set(itemId, pending);
+
+      const existingTimer = saveTimersRef.current.get(itemId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      const timer = setTimeout(() => {
+        saveTimersRef.current.delete(itemId);
+        void flushSave(itemId);
+      }, SAVE_DEBOUNCE_MS);
+
+      saveTimersRef.current.set(itemId, timer);
+    },
+    [flushSave]
+  );
 
   const persistItemPlacement = useCallback(
     async ({
@@ -55,12 +136,6 @@ const App = () => {
     }) => {
       const nowIso = new Date().toISOString();
 
-      setSavingIds((current) => {
-        const updated = new Set(current);
-        updated.add(itemId);
-        return updated;
-      });
-
       setItems((current) =>
         current.map((item) =>
           item.id === itemId
@@ -75,44 +150,29 @@ const App = () => {
         )
       );
 
-      try {
-        const item = itemById.get(itemId);
-        await updateItem({
+      const item = itemById.get(itemId);
+      queueDebouncedSave(itemId, {
+        payload: {
           id: itemId,
           status: nextStatus,
           x,
           y,
           sticker: item ? resolveStickerKey(item.sticker, item.id) : undefined
-        });
-      } catch (err) {
-        setItems((current) =>
-          current.map((item) =>
-            item.id === itemId
-              ? {
-                  ...item,
-                  status: previousStatus,
-                  x: previousX,
-                  y: previousY
-                }
-              : item
-          )
-        );
-        setToast(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed');
-      } finally {
-        setSavingIds((current) => {
-          const updated = new Set(current);
-          updated.delete(itemId);
-          return updated;
-        });
-      }
+        },
+        rollback: {
+          status: previousStatus,
+          x: previousX,
+          y: previousY
+        }
+      });
     },
-    [itemById]
+    [itemById, queueDebouncedSave]
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const id = String(event.active.id);
     const item = itemById.get(id);
-    if (!item || savingIds.has(id)) {
+    if (!item) {
       return;
     }
 
