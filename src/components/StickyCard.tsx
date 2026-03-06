@@ -81,11 +81,13 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         minHeight: STICKY_HEIGHT,
         cursor: 'grab',
         userSelect: 'none',
-        backgroundImage: `linear-gradient(160deg, rgba(255,248,176,0.96) 0%, rgba(247,239,144,0.96) 100%), url(${sticker})`,
-        backgroundSize: 'cover, 120px',
-        backgroundPosition: 'center, right -8px bottom -8px',
-        backgroundRepeat: 'no-repeat, no-repeat',
+        // Keep text readable while using the sticker art as the full card background.
+        backgroundImage: `linear-gradient(0deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.38)), url(${sticker})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         borderRadius: 2,
+        overflow: 'hidden',
         p: 1.5,
         boxShadow: '0 8px 18px rgba(0, 0, 0, 0.18)',
         border: '1px solid rgba(0, 0, 0, 0.08)',
@@ -96,7 +98,7 @@ export const StickyCard = ({ item }: StickyCardProps) => {
       }}
       style={style}
     >
-      <Typography fontWeight={700} lineHeight={1.2}>
+      <Typography fontWeight={700} lineHeight={1.2} color="rgba(24, 24, 24, 0.95)">
         {item.title}
       </Typography>
 
@@ -126,7 +128,8 @@ export const StickyCard = ({ item }: StickyCardProps) => {
           sx={{
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            color: 'rgba(17, 24, 39, 0.9)'
           }}
         >
           Open link
