@@ -71,15 +71,13 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         left: item.x ?? 28,
         top: item.y ?? 28,
         width: STICKY_WIDTH,
-        minHeight: STICKY_HEIGHT,
+        height: STICKY_HEIGHT,
         cursor: 'grab',
         userSelect: 'none',
-        // Keep sticky note base color and place SVG as a real image layer.
-        backgroundColor: 'rgba(255, 248, 176, 0.96)',
-        borderRadius: 2,
-        overflow: 'hidden',
-        boxShadow: '0 8px 18px rgba(0, 0, 0, 0.18)',
-        border: '1px solid rgba(0, 0, 0, 0.08)',
+        backgroundColor: 'transparent',
+        overflow: 'visible',
+        boxShadow: 'none',
+        border: 'none',
         '&:active': { cursor: 'grabbing' }
       }}
       style={style}
@@ -91,13 +89,10 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         aria-hidden
         sx={{
           position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 'auto',
-          height: 'auto',
-          maxWidth: '100%',
-          maxHeight: '100%',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
           pointerEvents: 'none',
           userSelect: 'none',
           zIndex: 0
@@ -106,25 +101,21 @@ export const StickyCard = ({ item }: StickyCardProps) => {
 
       <Box
         sx={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: 'rgba(255, 255, 255, 0.28)',
-          pointerEvents: 'none',
-          zIndex: 0
-        }}
-      />
-
-      <Box
-        sx={{
           position: 'relative',
           zIndex: 1,
-          p: 1.5,
+          p: 1.25,
           display: 'flex',
           flexDirection: 'column',
-          gap: 1
+          gap: 1,
+          alignItems: 'center'
         }}
       >
-        <Typography fontWeight={700} lineHeight={1.2} color="rgba(24, 24, 24, 0.95)">
+        <Typography
+          fontWeight={700}
+          lineHeight={1.2}
+          color="rgba(24, 24, 24, 0.95)"
+          sx={{ textAlign: 'center', mt: 1 }}
+        >
           {item.title}
         </Typography>
 
