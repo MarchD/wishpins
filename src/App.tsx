@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { Alert, Box, Button, CircularProgress, Snackbar, Stack, Typography } from '@mui/material';
 import { fetchItems, updateItem } from './api/sheets';
-import { Board, IN_PROGRESS_DONE_ZONE_ID, TODO_ZONE_ID } from './components/Board';
+import { Board } from './components/Board';
 import { STICKY_HEIGHT, STICKY_WIDTH } from './components/StickyCard';
 import { resolveStickerKey } from './stickers';
 import type { WishItem, WishStatus } from './types';
@@ -110,11 +110,6 @@ const App = () => {
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const destination = String(event.over?.id ?? '');
-    if (destination !== TODO_ZONE_ID && destination !== IN_PROGRESS_DONE_ZONE_ID) {
-      return;
-    }
-
     const id = String(event.active.id);
     const item = itemById.get(id);
     if (!item || savingIds.has(id)) {
@@ -126,8 +121,7 @@ const App = () => {
       return;
     }
 
-    const nextStatus: WishStatus =
-      destination === TODO_ZONE_ID ? 'todo' : item.status === 'done' ? 'done' : 'in_progress';
+    const nextStatus: WishStatus = item.status;
 
     const canvasRect = canvas.getBoundingClientRect();
     const itemRect = event.active.rect.current.initial ?? event.active.rect.current.translated;
@@ -138,8 +132,11 @@ const App = () => {
     const rawLeft = itemRect.left + event.delta.x - canvasRect.left;
     const rawTop = itemRect.top + event.delta.y - canvasRect.top;
 
-    const clampedX = Math.max(8, Math.min(rawLeft, canvasRect.width - STICKY_WIDTH - 8));
-    const clampedY = Math.max(8, Math.min(rawTop, canvasRect.height - STICKY_HEIGHT - 8));
+    // Let users pin close to edges while keeping cards recoverable on-screen.
+    const overflowX = Math.round(STICKY_WIDTH * 0.35);
+    const overflowY = Math.round(STICKY_HEIGHT * 0.35);
+    const clampedX = Math.max(-overflowX, Math.min(rawLeft, canvasRect.width - STICKY_WIDTH + overflowX));
+    const clampedY = Math.max(-overflowY, Math.min(rawTop, canvasRect.height - STICKY_HEIGHT + overflowY));
 
     void persistItemPlacement({
       itemId: id,
