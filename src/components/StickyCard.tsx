@@ -20,18 +20,16 @@ export const STICKY_HEIGHT = 190;
 
 type StickerStyle = {
   src: string;
-  size: string;
-  position: string;
 };
 
 const stickerStyles: Record<StickerKey, StickerStyle> = {
-  'group-0': { src: stickerGroup0, size: '124% auto', position: 'center 42%' },
-  'group-1': { src: stickerGroup1, size: '108% auto', position: 'center 50%' },
-  'group-2': { src: stickerGroup2, size: '116% auto', position: 'center 46%' },
-  'group-3': { src: stickerGroup3, size: '112% auto', position: 'center 48%' },
-  'group-4': { src: stickerGroup4, size: '122% auto', position: 'center 54%' },
-  'group-5': { src: stickerGroup5, size: '108% auto', position: 'center 50%' },
-  'group-6': { src: stickerGroup6, size: '118% auto', position: 'center 52%' }
+  'group-0': { src: stickerGroup0 },
+  'group-1': { src: stickerGroup1 },
+  'group-2': { src: stickerGroup2 },
+  'group-3': { src: stickerGroup3 },
+  'group-4': { src: stickerGroup4 },
+  'group-5': { src: stickerGroup5 },
+  'group-6': { src: stickerGroup6 }
 };
 
 export const StickyCard = ({ item }: StickyCardProps) => {
@@ -76,9 +74,10 @@ export const StickyCard = ({ item }: StickyCardProps) => {
         cursor: 'grab',
         userSelect: 'none',
         // Keep text readable while using the sticker art as the full card background.
-        backgroundImage: `linear-gradient(0deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.38)), url(${sticker.src})`,
-        backgroundSize: `cover, ${sticker.size}`,
-        backgroundPosition: `center, ${sticker.position}`,
+        backgroundColor: 'rgba(255, 248, 176, 0.96)',
+        backgroundImage: `linear-gradient(0deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.34)), url(${sticker.src})`,
+        backgroundSize: 'cover, contain',
+        backgroundPosition: 'center, center',
         backgroundRepeat: 'no-repeat',
         borderRadius: 2,
         overflow: 'hidden',
