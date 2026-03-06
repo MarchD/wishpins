@@ -20,6 +20,20 @@ interface PendingDoneMove {
   previousStatus: WishStatus;
 }
 
+const assetImageMap = import.meta.glob('./assets/*.svg', { eager: true, import: 'default' }) as Record<
+  string,
+  string
+>;
+const assetImages = Object.values(assetImageMap);
+
+const randomAssetImage = (): string | undefined => {
+  if (assetImages.length === 0) {
+    return undefined;
+  }
+  const randomIndex = Math.floor(Math.random() * assetImages.length);
+  return assetImages[randomIndex];
+};
+
 const App = () => {
   const [items, setItems] = useState<WishItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +48,7 @@ const App = () => {
       setLoading(true);
       setError(null);
       const loaded = await fetchItems();
-      setItems(loaded);
+      setItems(loaded.map((item) => ({ ...item, image: randomAssetImage() })));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
