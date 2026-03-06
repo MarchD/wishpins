@@ -8,7 +8,7 @@ import stickerGroup3 from '../assets/stickers/sticker-group-3.svg';
 import stickerGroup4 from '../assets/stickers/sticker-group-4.svg';
 import stickerGroup5 from '../assets/stickers/sticker-group-5.svg';
 import stickerGroup6 from '../assets/stickers/sticker-group-6.svg';
-import { resolveStickerKey, type StickerKey } from '../stickers';
+import { resolveStickerKey, stickerTextLayoutByKey, type StickerKey } from '../stickers';
 import type { WishItem } from '../types';
 
 interface StickyCardProps {
@@ -57,6 +57,7 @@ export const StickyCard = ({ item }: StickyCardProps) => {
 
   const stickerKey = resolveStickerKey(item.sticker, item.id);
   const sticker = stickerStyles[stickerKey];
+  const textLayout = stickerTextLayoutByKey[stickerKey];
 
   return (
     <Box
@@ -101,20 +102,31 @@ export const StickyCard = ({ item }: StickyCardProps) => {
 
       <Box
         sx={{
-          position: 'relative',
+          position: 'absolute',
+          left: `${textLayout.x}%`,
+          top: `${textLayout.y}%`,
+          width: `${textLayout.width}%`,
+          minHeight: `${textLayout.height}%`,
           zIndex: 1,
-          p: 1.25,
+          px: 0.5,
           display: 'flex',
           flexDirection: 'column',
           gap: 1,
-          alignItems: 'center'
+          alignItems: textLayout.align === 'center' ? 'center' : 'flex-start'
         }}
       >
         <Typography
           fontWeight={700}
           lineHeight={1.2}
           color="rgba(24, 24, 24, 0.95)"
-          sx={{ textAlign: 'center', mt: 1 }}
+          sx={{
+            textAlign: textLayout.align,
+            fontSize: textLayout.titleSize,
+            overflow: 'hidden',
+            display: '-webkit-box',
+            WebkitLineClamp: textLayout.titleLines,
+            WebkitBoxOrient: 'vertical'
+          }}
         >
           {item.title}
         </Typography>
@@ -140,13 +152,16 @@ export const StickyCard = ({ item }: StickyCardProps) => {
             target="_blank"
             rel="noreferrer"
             underline="hover"
-            fontSize={13}
+            fontSize={textLayout.linkSize}
             onClick={onLinkClick}
             sx={{
+              mt: `${textLayout.linkOffsetTop}px`,
+              maxWidth: '100%',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              color: 'rgba(17, 24, 39, 0.9)'
+              color: 'rgba(17, 24, 39, 0.9)',
+              textAlign: textLayout.align
             }}
           >
             Open link
