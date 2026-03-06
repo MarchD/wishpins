@@ -3,6 +3,7 @@ import { DndContext, DragEndEvent } from '@dnd-kit/core';
 import { Alert, Box, Button, CircularProgress, Snackbar, Stack, Typography } from '@mui/material';
 import { fetchItems, updateItem } from './api/sheets';
 import { Board } from './components/Board';
+import { ConfirmDoneModal } from './components/ConfirmDoneModal';
 import { STICKY_HEIGHT, STICKY_WIDTH } from './components/StickyCard';
 import { resolveStickerKey } from './stickers';
 import type { UpdateWishPayload, WishItem, WishStatus } from './types';
@@ -18,11 +19,43 @@ type PendingSave = {
 
 const SAVE_DEBOUNCE_MS = 350;
 
+type PendingStatusDecision = {
+  itemId: string;
+  nextStatus: WishStatus;
+  previousStatus: WishStatus;
+  x: number;
+  y: number;
+  previousX?: number;
+  previousY?: number;
+};
+
+const statusScopeSelector = '[data-status-scope]';
+
+const getScopeStatusForPoint = (pointX: number, pointY: number): WishStatus | undefined => {
+  const scopes = document.querySelectorAll<HTMLElement>(statusScopeSelector);
+
+  for (const scope of scopes) {
+    const status = scope.dataset.statusScope;
+    if (status !== 'in_progress' && status !== 'done') {
+      continue;
+    }
+
+    const rect = scope.getBoundingClientRect();
+    if (pointX >= rect.left && pointX <= rect.right && pointY >= rect.top && pointY <= rect.bottom) {
+      return status;
+    }
+  }
+
+  return undefined;
+};
+
 const App = () => {
   const [items, setItems] = useState<WishItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [pendingStatusDecision, setPendingStatusDecision] = useState<PendingStatusDecision | null>(null);
+  const [isDecisionSubmitting, setIsDecisionSubmitting] = useState(false);
   const pendingSavesRef = useRef<Map<string, PendingSave>>(new Map());
   const saveTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const inFlightSaveIdsRef = useRef<Set<string>>(new Set());
@@ -181,13 +214,16 @@ const App = () => {
       return;
     }
 
-    const nextStatus: WishStatus = item.status;
-
     const canvasRect = canvas.getBoundingClientRect();
     const itemRect = event.active.rect.current.initial ?? event.active.rect.current.translated;
     if (!itemRect) {
       return;
     }
+
+    const dropCenterX = itemRect.left + event.delta.x + itemRect.width / 2;
+    const dropCenterY = itemRect.top + event.delta.y + itemRect.height / 2;
+    const nextScopeStatus = getScopeStatusForPoint(dropCenterX, dropCenterY);
+    const nextStatus: WishStatus = nextScopeStatus ?? item.status;
 
     const rawLeft = itemRect.left + event.delta.x - canvasRect.left;
     const rawTop = itemRect.top + event.delta.y - canvasRect.top;
@@ -197,6 +233,19 @@ const App = () => {
     const overflowY = Math.round(STICKY_HEIGHT * 0.35);
     const clampedX = Math.max(-overflowX, Math.min(rawLeft, canvasRect.width - STICKY_WIDTH + overflowX));
     const clampedY = Math.max(-overflowY, Math.min(rawTop, canvasRect.height - STICKY_HEIGHT + overflowY));
+
+    if (nextStatus !== item.status && (nextStatus === 'in_progress' || nextStatus === 'done')) {
+      setPendingStatusDecision({
+        itemId: id,
+        nextStatus,
+        previousStatus: item.status,
+        x: clampedX,
+        y: clampedY,
+        previousX: item.x,
+        previousY: item.y
+      });
+      return;
+    }
 
     void persistItemPlacement({
       itemId: id,
@@ -208,6 +257,50 @@ const App = () => {
       previousY: item.y
     });
   };
+
+  const handleCancelDecision = () => {
+    if (isDecisionSubmitting) {
+      return;
+    }
+    setPendingStatusDecision(null);
+  };
+
+  const handleConfirmDecision = async () => {
+    if (!pendingStatusDecision || isDecisionSubmitting) {
+      return;
+    }
+
+    setIsDecisionSubmitting(true);
+
+    try {
+      await persistItemPlacement({
+        itemId: pendingStatusDecision.itemId,
+        nextStatus: pendingStatusDecision.nextStatus,
+        previousStatus: pendingStatusDecision.previousStatus,
+        x: pendingStatusDecision.x,
+        y: pendingStatusDecision.y,
+        previousX: pendingStatusDecision.previousX,
+        previousY: pendingStatusDecision.previousY
+      });
+      setPendingStatusDecision(null);
+    } finally {
+      setIsDecisionSubmitting(false);
+    }
+  };
+
+  const decisionCopy =
+    pendingStatusDecision?.nextStatus === 'in_progress'
+      ? {
+          title: 'Забронювати це бажання? 👀',
+          description: 'Якщо підтвердиш, інші побачать, що подарунок уже в роботі.',
+          confirmLabel: 'Так, бронюю'
+        }
+      : {
+          title: 'Ти прям точно впевнений? 👀',
+          description:
+            'Бо тіко закриєш цю сторінку — інші не зможуть це подарувать, а ти не зможеш передумать. А мені було лінь тут щось придумувать ВАХХААХ.',
+          confirmLabel: 'Так, забираю'
+        };
 
   return (
     <Box sx={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative' }}>
@@ -260,6 +353,16 @@ const App = () => {
           {toast}
         </Alert>
       </Snackbar>
+
+      <ConfirmDoneModal
+        open={Boolean(pendingStatusDecision)}
+        isSubmitting={isDecisionSubmitting}
+        onCancel={handleCancelDecision}
+        onConfirm={handleConfirmDecision}
+        title={decisionCopy.title}
+        description={decisionCopy.description}
+        confirmLabel={decisionCopy.confirmLabel}
+      />
     </Box>
   );
 };
