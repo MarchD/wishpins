@@ -1,10 +1,13 @@
 import { CSSProperties, MouseEvent } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Box, Link as MuiLink, Typography } from '@mui/material';
-import stickerBolt from '../assets/stickers/sticker-bolt.svg';
-import stickerFlower from '../assets/stickers/sticker-flower.svg';
-import stickerHeart from '../assets/stickers/sticker-heart.svg';
-import stickerStar from '../assets/stickers/sticker-star.svg';
+import stickerGroup0 from '../assets/stickers/sticker-group-0.svg';
+import stickerGroup1 from '../assets/stickers/sticker-group-1.svg';
+import stickerGroup2 from '../assets/stickers/sticker-group-2.svg';
+import stickerGroup3 from '../assets/stickers/sticker-group-3.svg';
+import stickerGroup4 from '../assets/stickers/sticker-group-4.svg';
+import stickerGroup5 from '../assets/stickers/sticker-group-5.svg';
+import stickerGroup6 from '../assets/stickers/sticker-group-6.svg';
 import type { WishItem } from '../types';
 
 interface StickyCardProps {
@@ -14,7 +17,15 @@ interface StickyCardProps {
 export const STICKY_WIDTH = 190;
 export const STICKY_HEIGHT = 190;
 
-const stickerVariants = [stickerFlower, stickerStar, stickerHeart, stickerBolt];
+const stickerVariants = [
+  stickerGroup0,
+  stickerGroup1,
+  stickerGroup2,
+  stickerGroup3,
+  stickerGroup4,
+  stickerGroup5,
+  stickerGroup6
+];
 
 const hashString = (value: string): number => {
   let hash = 0;
