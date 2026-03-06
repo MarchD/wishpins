@@ -18,6 +18,8 @@ type PendingSave = {
 };
 
 const SAVE_DEBOUNCE_MS = 350;
+const MAP_WIDTH = 2200;
+const MAP_HEIGHT = 1400;
 
 type PendingStatusDecision = {
   itemId: string;
@@ -215,6 +217,8 @@ const App = () => {
     }
 
     const canvasRect = canvas.getBoundingClientRect();
+    const scaleRaw = Number(canvas.dataset.mapScale ?? 1);
+    const scale = Number.isFinite(scaleRaw) && scaleRaw > 0 ? scaleRaw : 1;
     const itemRect = event.active.rect.current.initial ?? event.active.rect.current.translated;
     if (!itemRect) {
       return;
@@ -225,14 +229,14 @@ const App = () => {
     const nextScopeStatus = getScopeStatusForPoint(dropCenterX, dropCenterY);
     const nextStatus: WishStatus = nextScopeStatus ?? item.status;
 
-    const rawLeft = itemRect.left + event.delta.x - canvasRect.left;
-    const rawTop = itemRect.top + event.delta.y - canvasRect.top;
+    const rawLeft = (itemRect.left + event.delta.x - canvasRect.left) / scale;
+    const rawTop = (itemRect.top + event.delta.y - canvasRect.top) / scale;
 
     // Let users pin close to edges while keeping cards recoverable on-screen.
     const overflowX = Math.round(STICKY_WIDTH * 0.35);
     const overflowY = Math.round(STICKY_HEIGHT * 0.35);
-    const clampedX = Math.max(-overflowX, Math.min(rawLeft, canvasRect.width - STICKY_WIDTH + overflowX));
-    const clampedY = Math.max(-overflowY, Math.min(rawTop, canvasRect.height - STICKY_HEIGHT + overflowY));
+    const clampedX = Math.max(-overflowX, Math.min(rawLeft, MAP_WIDTH - STICKY_WIDTH + overflowX));
+    const clampedY = Math.max(-overflowY, Math.min(rawTop, MAP_HEIGHT - STICKY_HEIGHT + overflowY));
 
     if (nextStatus !== item.status && (nextStatus === 'in_progress' || nextStatus === 'done')) {
       setPendingStatusDecision({
@@ -339,7 +343,7 @@ const App = () => {
         </Stack>
       ) : (
         <DndContext onDragEnd={handleDragEnd}>
-          <Board items={items} />
+          <Board items={items} width={MAP_WIDTH} height={MAP_HEIGHT} />
         </DndContext>
       )}
 

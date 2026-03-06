@@ -62,6 +62,7 @@ export const StickyCard = ({ item }: StickyCardProps) => {
   return (
     <Box
       ref={setNodeRef}
+      data-sticky-card="true"
       {...listeners}
       {...attributes}
       onClick={onCardClick}
